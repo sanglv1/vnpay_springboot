@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tạo đơn hàng - VNPAY</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --vnpay-primary: #0066cc;
+            --vnpay-primary-dark: #0052a3;
+            --vnpay-bg: #f0f4f8;
+            --card-shadow: 0 8px 32px rgba(0, 102, 204, 0.08);
+            --card-radius: 16px;
+        }
+        body {
+            font-family: 'Be Vietnam Pro', -apple-system, sans-serif;
+            background: linear-gradient(160deg, #f0f4f8 0%, #e8eef5 100%);
+            min-height: 100vh;
+            padding: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .app-card {
+            max-width: 460px;
+            width: 100%;
+            background: #fff;
+            border-radius: var(--card-radius);
+            box-shadow: var(--card-shadow);
+            border: 1px solid rgba(0, 102, 204, 0.06);
+            overflow: hidden;
+        }
+        .app-card .card-header {
+            background: linear-gradient(135deg, var(--vnpay-primary) 0%, var(--vnpay-primary-dark) 100%);
+            color: #fff;
+            font-weight: 700;
+            font-size: 1.2rem;
+            padding: 1.35rem;
+            text-align: center;
+            letter-spacing: 0.03em;
+        }
+        .app-card .card-body { padding: 1.75rem 1.5rem; }
+        .logo-wrap {
+            text-align: center;
+            padding-bottom: 1rem;
+            margin-bottom: 1.25rem;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .logo-wrap img { width: 80px; opacity: 0.95; }
+        .form-label { font-weight: 600; color: #334155; }
+        .form-control, .form-select {
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            padding: 0.6rem 0.85rem;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--vnpay-primary);
+            box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.15);
+        }
+        .btn-pay {
+            background: linear-gradient(135deg, var(--vnpay-primary) 0%, var(--vnpay-primary-dark) 100%);
+            border: none;
+            color: #fff;
+            font-weight: 600;
+            padding: 0.85rem;
+            font-size: 1rem;
+            border-radius: 12px;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .btn-pay:hover {
+            color: #fff;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(0, 102, 204, 0.35);
+        }
+        .btn-pay:focus-visible { outline: 2px solid var(--vnpay-primary); outline-offset: 2px; }
+        .btn-back {
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            color: #64748b;
+            font-weight: 500;
+        }
+        .btn-back:hover { background: #f8fafc; border-color: #cbd5e1; color: #334155; }
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .app-card .card-footer {
+            padding: 1rem;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            border-top: 1px solid #f1f5f9;
+        }
+    </style>
+</head>
+<body>
+<div class="app-card card">
+    <div class="card-header">Tạo đơn hàng thanh toán</div>
+    <div class="card-body">
+        <div th:if="${error}" class="alert alert-danger py-2" th:text="${error}"></div>
+        <div class="logo-wrap">
+            <img th:src="@{/vnpay-logo.png}" alt="VNPAY">
+        </div>
+        <form th:action="@{/vnpay/submitOrder}" method="post">
+            <div class="mb-3">
+                <label for="txnRef" class="form-label">Mã đơn hàng (TxnRef)</label>
+                <input type="text" class="form-control" id="txnRef" name="txnRef" required
+                       placeholder="Tự động tạo" pattern="[A-Za-z0-9]+" maxlength="32"/>
+            </div>
+            <div class="mb-3">
+                <label for="amount" class="form-label">Số tiền (VNĐ)</label>
+                <input type="number" class="form-control" id="amount" name="amount" value="10000" min="10000" required>
+                <div class="form-text">Tối thiểu 10.000 VNĐ</div>
+            </div>
+            <div class="mb-3">
+                <label for="ordertype" class="form-label">Loại hàng hóa</label>
+                <select class="form-select" id="ordertype" name="ordertype" required>
+                    <option value="billpayment" selected>Thanh toán hóa đơn</option>
+                    <option value="fashion">Thời trang</option>
+                    <option value="oldmc">Hiển thị nội dung giao dịch</option>
+                    <option value="other">Loại khác</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="bankcode" class="form-label">Phương thức / Ngân hàng</label>
+                <select class="form-select" id="bankcode" name="bankcode">
+                    <option value="">Không chọn (VNPAY tự chọn)</option>
+                    <option value="VNPAYQR">VNPAYQR</option>
+                    <option value="VNBANK">LOCAL BANK (ATM/Tài khoản)</option>
+                    <option value="INTCARD">INTCARD (Thẻ quốc tế)</option>
+                    <option value="NCB">Ngân hàng NCB</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="orderInfo" class="form-label">Nội dung thanh toán</label>
+                <input type="text" class="form-control" id="orderInfo" name="orderInfo"
+                       value="Thanh toan don hang #VN_TXN" required>
+            </div>
+            <div class="mb-4">
+                <label for="promocode" class="form-label">Mã khuyến mại</label>
+                <input type="text" class="form-control" id="promocode" name="promocode" value="" placeholder="Tùy chọn">
+            </div>
+            <button type="submit" class="btn btn-pay w-100 mb-2">Thanh toán qua VNPAY</button>
+        </form>
+        <a th:href="@{/}" class="btn btn-back btn-sm w-100">← Về menu chính</a>
+    </div>
+    <div class="card-footer">&copy; VNPAY 2025</div>
+</div>
+<script>
+    function generateTxnRef() {
+        const now = new Date();
+        const pad = (n) => n.toString().padStart(2, '0');
+        return now.getFullYear().toString().slice(2) + pad(now.getMonth() + 1) + pad(now.getDate()) +
+            pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds()) + Math.random().toString().slice(2, 6);
+    }
+    document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("txnRef").value = "VNPAY" + generateTxnRef();
+    });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+</body>
+</html>

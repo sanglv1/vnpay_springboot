@@ -1,0 +1,15 @@
+services:
+  postgresdb:
+    image: postgres:15
+    container_name: vnpay-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: vnpay_pg_db
+      POSTGRES_USER: sanglv
+      POSTGRES_PASSWORD: 123456
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+volumes:
+  postgres_data:
