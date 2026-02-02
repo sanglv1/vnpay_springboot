@@ -3,6 +3,9 @@ package com.vnpay.springboot.Controller;
 import com.vnpay.springboot.Dto.PaymentRequest;
 import com.vnpay.springboot.Dto.QueryRequest;
 import com.vnpay.springboot.Dto.RefundRequest;
+import com.vnpay.springboot.Entity.PaymentOrder;
+import com.vnpay.springboot.Entity.PaymentStatus;
+import com.vnpay.springboot.Repository.PaymentOrderRepository;
 import com.vnpay.springboot.Service.VNPayService;
 import com.vnpay.springboot.Service.VNPayQuery;
 import com.vnpay.springboot.Service.VNPayRefund;
@@ -17,41 +20,151 @@ import org.springframework.validation.BindingResult;
 
 import jakarta.validation.Valid;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
 import java.io.UnsupportedEncodingException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 
 @Controller
-@RequestMapping("/vnpay")
+@RequestMapping("/demo")
 public class VNPayController {
 
     private static final Logger log = LoggerFactory.getLogger(VNPayController.class);
+    private static final int PAGE_SIZE = 15;
+
     private final VNPayService vnPayService;
     private final VNPayQuery vnPayQuery;
     private final VNPayRefund vnPayRefund;
+    private final PaymentOrderRepository orderRepository;
 
-    public VNPayController(VNPayService vnPayService, VNPayQuery vnPayQuery, VNPayRefund vnPayRefund) {
+    public VNPayController(VNPayService vnPayService, VNPayQuery vnPayQuery, VNPayRefund vnPayRefund,
+                           PaymentOrderRepository orderRepository) {
         this.vnPayService = vnPayService;
         this.vnPayQuery = vnPayQuery;
         this.vnPayRefund = vnPayRefund;
+        this.orderRepository = orderRepository;
     }
 
-    // ------------------- 1. FORM -------------------
+    // ------------------- LANDING -------------------
+    @GetMapping({"", "/"})
+    public String demoIndex() {
+        return "demo/index";
+    }
+
+    // ------------------- THỐNG KÊ ĐƠN HÀNG -------------------
+    @GetMapping("/dashboard")
+    public String dashboard(Model model) {
+        long total = orderRepository.count();
+        long pending = orderRepository.countByStatus(PaymentStatus.PENDING);
+        long success = orderRepository.countByStatus(PaymentStatus.SUCCESS);
+        long failed = orderRepository.countByStatus(PaymentStatus.FAILED);
+        Page<PaymentOrder> recent = orderRepository.findAllByOrderByCreatedAtDesc(
+                PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt")));
+        model.addAttribute("total", total);
+        model.addAttribute("pending", pending);
+        model.addAttribute("success", success);
+        model.addAttribute("failed", failed);
+        model.addAttribute("recentOrders", recent.getContent());
+        return "support/dashboard";
+    }
+
+    @GetMapping("/orders")
+    public String listOrders(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String txnRef,
+            @RequestParam(required = false) String dateFrom,
+            @RequestParam(required = false) String dateTo,
+            @RequestParam(defaultValue = "0") int page,
+            Model model) {
+        if (page < 0) page = 0;
+        if (status != null && ("null".equals(status) || status.isBlank())) status = null;
+        if (txnRef != null && ("null".equals(txnRef) || txnRef.isBlank())) txnRef = null;
+        if (dateFrom != null && ("null".equals(dateFrom) || dateFrom.isBlank())) dateFrom = null;
+        if (dateTo != null && ("null".equals(dateTo) || dateTo.isBlank())) dateTo = null;
+
+        Pageable pageable = PageRequest.of(page, PAGE_SIZE, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<PaymentOrder> orders;
+        if (status != null) {
+            try {
+                PaymentStatus ps = PaymentStatus.valueOf(status.toUpperCase());
+                orders = orderRepository.findByStatusOrderByCreatedAtDesc(ps, pageable);
+            } catch (IllegalArgumentException e) {
+                orders = orderRepository.findAllByOrderByCreatedAtDesc(pageable);
+            }
+        } else if (txnRef != null) {
+            orders = orderRepository.findByTxnRefContainingOrderByCreatedAtDesc(txnRef.trim(), pageable);
+        } else if (dateFrom != null && dateTo != null) {
+            try {
+                LocalDate from = LocalDate.parse(dateFrom);
+                LocalDate to = LocalDate.parse(dateTo);
+                LocalDateTime start = LocalDateTime.of(from, LocalTime.MIN);
+                LocalDateTime end = LocalDateTime.of(to, LocalTime.MAX);
+                orders = orderRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(start, end, pageable);
+            } catch (Exception e) {
+                orders = orderRepository.findAllByOrderByCreatedAtDesc(pageable);
+            }
+        } else {
+            orders = orderRepository.findAllByOrderByCreatedAtDesc(pageable);
+        }
+        model.addAttribute("orders", orders);
+        model.addAttribute("filterStatus", status);
+        model.addAttribute("filterTxnRef", txnRef);
+        model.addAttribute("filterDateFrom", dateFrom);
+        model.addAttribute("filterDateTo", dateTo);
+        return "support/orders";
+    }
+
+    @GetMapping("/orders/{id}")
+    public String orderDetail(@PathVariable Long id, Model model, RedirectAttributes redirectAttributes) {
+        Optional<PaymentOrder> opt = orderRepository.findById(id);
+        if (opt.isEmpty()) {
+            redirectAttributes.addFlashAttribute("error", "Không tìm thấy đơn hàng.");
+            return "redirect:/demo/orders";
+        }
+        model.addAttribute("order", opt.get());
+        return "support/order-detail";
+    }
+
+    // ------------------- FORM -------------------
     @GetMapping("/pay")
     public String showPayForm() {
         return "vnpay_pay";
     }
 
     @GetMapping("/query")
-    public String querydr() {
+    public String querydr(
+            @RequestParam(required = false) String txnRef,
+            @RequestParam(required = false) String transDate,
+            @RequestParam(required = false) String transactionNo,
+            Model model) {
+        if (txnRef != null) model.addAttribute("prefillTxnRef", txnRef);
+        if (transDate != null) model.addAttribute("prefillTransDate", transDate);
+        if (transactionNo != null) model.addAttribute("prefillTransactionNo", transactionNo);
         return "vnpay_querydr";
     }
 
     @GetMapping("/refund")
-    public String refund() {
+    public String refund(
+            @RequestParam(required = false) String txnRef,
+            @RequestParam(required = false) String transactionNo,
+            @RequestParam(required = false) Long amount,
+            @RequestParam(required = false) String transDate,
+            Model model) {
+        if (txnRef != null) model.addAttribute("prefillTxnRef", txnRef);
+        if (transactionNo != null) model.addAttribute("prefillTransactionNo", transactionNo);
+        if (amount != null) model.addAttribute("prefillAmount", amount);
+        if (transDate != null) model.addAttribute("prefillTransDate", transDate);
         return "vnpay_refund";
     }
 
-    // ------------------- 2. TẠO ĐƠN HÀNG -------------------
+    // ------------------- TẠO ĐƠN HÀNG -------------------
     @PostMapping("/submitOrder")
     public String submitOrder(
             @Valid PaymentRequest paymentRequest,
@@ -90,7 +203,7 @@ public class VNPayController {
         }
     }
 
-    // ------------------- 3. TRANG RETURN DUY NHẤT (ĐÃ SỬA LỖI SPEL) -------------------
+    // ------------------- RETURN / IPN -------------------
     @GetMapping("/vnpay-return")
     public String handleVnPayReturn(HttpServletRequest request, Model model) {
 
@@ -169,7 +282,7 @@ public class VNPayController {
     }
 
 
-    // ------------------- 4. QUERY -------------------
+    // ------------------- QUERY -------------------
     @PostMapping("/process-query")
     public String processQuery(
             @Valid QueryRequest queryRequest,
@@ -193,7 +306,7 @@ public class VNPayController {
         return "vnpay_query_result";
     }
 
-    // ------------------- 5. REFUND -------------------
+    // ------------------- REFUND -------------------
     @PostMapping("/process-refund")
     public String processRefund(
             @Valid RefundRequest refundRequest,

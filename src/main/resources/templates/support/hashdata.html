@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Chuẩn chuỗi hashData - CTT VNPAY</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
+    <style>
+        :root { --vnpay-primary: #0066cc; --card-radius: 16px; --card-shadow: 0 8px 32px rgba(0, 102, 204, 0.08); }
+        body { font-family: 'Be Vietnam Pro', sans-serif; background: linear-gradient(160deg, #f0f4f8 0%, #e8eef5 100%); min-height: 100vh; padding: 24px; margin: 0; }
+        .support-header { background: linear-gradient(135deg, var(--vnpay-primary) 0%, #0052a3 100%); color: #fff; padding: 1rem 1.5rem; border-radius: var(--card-radius) var(--card-radius) 0 0; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+        .card { border-radius: var(--card-radius); box-shadow: var(--card-shadow); border: 1px solid rgba(0,0,0,0.04); overflow: hidden; margin-bottom: 1rem; }
+        .card-body { padding: 1.5rem; }
+        textarea.form-control { font-family: Consolas, Monaco, monospace; font-size: 0.85rem; min-height: 120px; border-radius: 10px; }
+        .btn-back { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 0.5rem 1rem; border-radius: 10px; text-decoration: none; font-weight: 500; }
+        .btn-back:hover { background: #e2e8f0; color: #334155; }
+        .output-block { background: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 10px; font-family: Consolas, monospace; font-size: 0.85rem; word-break: break-all; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+<div class="container" style="max-width: 720px;">
+    <div class="card">
+        <div class="support-header">
+            <i class="fas fa-code"></i>
+            Chuẩn chuỗi hashData
+        </div>
+        <div class="card-body">
+            <a th:href="@{/support}" class="btn-back mb-3"><i class="fas fa-arrow-left me-1"></i> Về Công cụ hỗ trợ</a>
+
+            <p class="text-muted small mb-3">Nhập chuỗi query (key1=value1&amp;key2=value2). Công cụ tạo chuỗi hashData chuẩn VNPAY: sắp xếp key A-Z, bỏ vnp_SecureHash/vnp_SecureHashType (tùy chọn), URL-encode value, nối bằng &amp;.</p>
+
+            <form th:action="@{/support/hashdata}" method="post">
+                <div class="mb-3">
+                    <label for="queryString" class="form-label">Chuỗi query</label>
+                    <textarea class="form-control" id="queryString" name="queryString" placeholder="vd: vnp_Amount=1000000&amp;vnp_TxnRef=VNPAY01&amp;vnp_SecureHash=abc..." th:text="${queryString}"> </textarea>
+                </div>
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="excludeSecureHash" name="excludeSecureHash" value="true" th:checked="${excludeSecureHash != null && excludeSecureHash}">
+                    <label class="form-check-label" for="excludeSecureHash">Loại trừ vnp_SecureHash và vnp_SecureHashType (đúng chuẩn khi tạo chữ ký)</label>
+                </div>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-cog me-1"></i> Tạo chuỗi hashData</button>
+            </form>
+
+            <div th:if="${hashData != null}" class="mt-4">
+                <label class="form-label">Chuỗi hashData <span class="text-muted" th:if="${paramCount != null}" th:text="'(' + ${paramCount} + ' tham số)'">(0 tham số)</span></label>
+                <div class="output-block" th:text="${hashData}">-</div>
+            </div>
+            <div th:if="${error}" class="alert alert-danger mt-3 py-2" th:text="${error}">-</div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+</body>
+</html>

@@ -48,6 +48,14 @@ public class VNPayService {
         order.setIpAddress(clientIp);
         paymentOrderRepository.save(order);
 
+        return buildPaymentUrl(total, orderInfor, bankcode, ordertype, promocode, txnRef, clientIp);
+    }
+
+    /**
+     * Tạo URL thanh toán VNPAY (không lưu DB). Dùng cho công cụ hỗ trợ.
+     */
+    public String buildPaymentUrl(long total, String orderInfor, String bankcode, String ordertype,
+                                  String promocode, String txnRef, String clientIp) throws UnsupportedEncodingException {
         Map<String, String> vnp_Params = new HashMap<>();
 
         vnp_Params.put("vnp_Version", "2.1.1");
@@ -102,8 +110,7 @@ public class VNPayService {
         return vnPayConfig.getPayUrl() + "?" + queryUrl;
     }
 
-
-    // ------------------- 2. XỬ LÝ TRANG TRẢ VỀ (RETURN URL - Đã có) -------------------
+// ------------------- 2. XỬ LÝ TRANG TRẢ VỀ (RETURN URL) -------------------
 
     public int processVnPayReturn(Map<String, String> vnpParams) {
 

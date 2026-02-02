@@ -9,10 +9,10 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.sang</groupId>
-    <artifactId>VNPAY-Demo</artifactId>
+    <artifactId>vnpay-support-tool</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>VNPAY-Demo</name>
-    <description>VNPAY-Demo</description>
+    <name>Công cụ hỗ trợ CTT VNPAY</name>
+    <description>Công cụ hỗ trợ tích hợp Cổng thanh toán VNPAY - Support tools, demo Payment, chatbot</description>
     <properties>
         <java.version>17</java.version>
     </properties>

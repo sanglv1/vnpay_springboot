@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Danh sách đơn hàng - CTT VNPAY</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
+    <style>
+        :root { --vnpay-primary: #0066cc; --card-radius: 16px; --card-shadow: 0 8px 32px rgba(0, 102, 204, 0.08); }
+        body { font-family: 'Be Vietnam Pro', sans-serif; background: linear-gradient(160deg, #f0f4f8 0%, #e8eef5 100%); min-height: 100vh; padding: 24px; margin: 0; }
+        .support-header { background: linear-gradient(135deg, var(--vnpay-primary) 0%, #0052a3 100%); color: #fff; padding: 1rem 1.5rem; border-radius: var(--card-radius) var(--card-radius) 0 0; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+        .card { border-radius: var(--card-radius); box-shadow: var(--card-shadow); border: 1px solid rgba(0,0,0,0.04); overflow: hidden; margin-bottom: 1rem; }
+        .card-body { padding: 1.5rem; }
+        .filter-form .form-control, .filter-form .form-select { border-radius: 10px; padding: 0.5rem 0.75rem; }
+        .btn-filter { background: var(--vnpay-primary); color: #fff; border: none; padding: 0.5rem 1rem; border-radius: 10px; font-weight: 600; }
+        .btn-filter:hover { color: #fff; opacity: 0.9; }
+        .btn-back { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 0.5rem 1rem; border-radius: 10px; text-decoration: none; font-weight: 500; }
+        .btn-back:hover { background: #e2e8f0; color: #334155; }
+        .table-orders { font-size: 0.9rem; }
+        .badge-pending { background: #fef3c7; color: #92400e; }
+        .badge-success { background: #d1fae5; color: #065f46; }
+        .badge-failed { background: #fee2e2; color: #991b1b; }
+        .link-detail { color: var(--vnpay-primary); text-decoration: none; font-weight: 500; }
+        .link-detail:hover { text-decoration: underline; }
+        .pagination .page-link { border-radius: 8px; margin: 0 2px; }
+    </style>
+</head>
+<body>
+<div class="container-fluid" style="max-width: 1100px;">
+    <div class="card">
+        <div class="support-header">
+            <i class="fas fa-list"></i>
+            Danh sách đơn hàng
+        </div>
+        <div class="card-body">
+            <a th:href="@{/demo/dashboard}" class="btn-back mb-3"><i class="fas fa-arrow-left me-1"></i> Về Thống kê đơn hàng</a>
+
+            <form th:action="@{/demo/orders}" method="get" class="filter-form row g-2 mb-4">
+                <div class="col-auto">
+                    <select name="status" class="form-select form-select-sm" style="width: auto;">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="PENDING" th:selected="${filterStatus == 'PENDING'}">Chờ thanh toán</option>
+                        <option value="SUCCESS" th:selected="${filterStatus == 'SUCCESS'}">Thành công</option>
+                        <option value="FAILED" th:selected="${filterStatus == 'FAILED'}">Thất bại</option>
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <input type="text" name="txnRef" class="form-control form-control-sm" placeholder="Tìm TxnRef" th:value="${filterTxnRef}" style="width: 180px;">
+                </div>
+                <div class="col-auto">
+                    <input type="date" name="dateFrom" class="form-control form-control-sm" th:value="${filterDateFrom}" style="width: auto;">
+                </div>
+                <div class="col-auto">
+                    <input type="date" name="dateTo" class="form-control form-control-sm" th:value="${filterDateTo}" style="width: auto;">
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-filter btn-sm"><i class="fas fa-search me-1"></i> Lọc</button>
+                </div>
+            </form>
+
+            <div class="table-responsive">
+                <table class="table table-orders table-hover align-middle">
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>TxnRef</th>
+                        <th>Số tiền</th>
+                        <th>Nội dung</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày tạo</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="o : ${orders.content}">
+                        <td th:text="${o.id}">-</td>
+                        <td th:text="${o.txnRef}">-</td>
+                        <td th:text="${#numbers.formatInteger(o.amount, 0, 'COMMA') + ' VND'}">-</td>
+                        <td th:text="${#strings.abbreviate(o.orderInfo, 25)}">-</td>
+                        <td>
+                            <span th:if="${o.status.name() == 'PENDING'}" class="badge badge-pending">Chờ TT</span>
+                            <span th:if="${o.status.name() == 'SUCCESS'}" class="badge badge-success">Thành công</span>
+                            <span th:if="${o.status.name() == 'FAILED'}" class="badge badge-failed">Thất bại</span>
+                        </td>
+                        <td th:text="${#temporals.format(o.createdAt, 'dd/MM/yyyy HH:mm')}">-</td>
+                        <td><a th:href="@{/demo/orders/{id}(id=${o.id})}" class="link-detail">Chi tiết</a></td>
+                    </tr>
+                    <tr th:if="${orders.isEmpty()}">
+                        <td colspan="7" class="text-center text-muted py-4">Không có đơn hàng nào</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div th:if="${orders.totalPages > 1}" class="d-flex justify-content-between align-items-center mt-3">
+                <small class="text-muted" th:text="'Trang ' + (orders.number + 1) + ' / ' + orders.totalPages + ' (' + orders.totalElements + ' đơn)'>Trang 1 / 1</small>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item" th:classappend="${!orders.hasPrevious()} ? 'disabled'">
+                            <a class="page-link" th:href="@{/demo/orders(status=${filterStatus}, txnRef=${filterTxnRef}, dateFrom=${filterDateFrom}, dateTo=${filterDateTo}, page=${orders.number - 1})}">Trước</a>
+                        </li>
+                        <li class="page-item" th:classappend="${!orders.hasNext()} ? 'disabled'">
+                            <a class="page-link" th:href="@{/demo/orders(status=${filterStatus}, txnRef=${filterTxnRef}, dateFrom=${filterDateFrom}, dateTo=${filterDateTo}, page=${orders.number + 1})}">Sau</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+</body>
+</html>
